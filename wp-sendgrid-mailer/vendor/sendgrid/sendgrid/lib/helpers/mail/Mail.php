@@ -922,12 +922,6 @@ class Mail implements \JsonSerializable
             $personalization = new Personalization();
             $personalization->addTo($to);
 
-            // lanars custom code
-            if ( $subject == 'Kontakt Bryllupsleverandøren' ) {
-                $new_email = new Email("Site Admin", "leverandor@bryllupshjelperen.no");
-                $personalization->addCc($new_email);
-            }
-
             $this->addPersonalization($personalization);
             $this->setSubject($subject);
             $this->addContent($content);

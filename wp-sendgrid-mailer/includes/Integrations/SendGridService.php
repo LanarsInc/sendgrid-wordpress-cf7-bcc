@@ -7,6 +7,7 @@
 
 namespace WPMailPlus\Integrations;
 
+use SendGrid\Personalization;
 use WPMailPlus\BaseController;
 
 use WPMailPlus\EmailService;
@@ -42,8 +43,27 @@ class SendGridService implements EmailService
 		$content = new SendGrid\Content("text/html", $message);
 		$mail = new SendGrid\Mail($from, $subject, $mail_to, $content);
 
-		$personalization0->addCc(new Cc("anton.momot@lanars.com", "Jane Doe"));
-		$mail->addPersonalization($personalization0);
+		//	Check if CF7 plugin is enabled
+		// Make headers array in order to be able to parce it
+		$tempheaders = explode( "\n", str_replace( "\r\n", "\n", $headers ) );
+
+		if ( is_plugin_active( 'contact-form-7/wp-contact-form-7.php' ) ) {
+			if ( !empty( $tempheaders ) ) {
+				foreach ( $tempheaders as $tempheader ) {
+
+					// Search for "Bcc" and "Cc" settings
+					list( $name, $content ) = explode(':', trim( $tempheader ), 2);
+					$tempheader_name = trim( $name );
+					$tempheader_content = trim( $content );
+
+					if ( 'bcc' == strtolower( $tempheader_name ) || 'cc' == strtolower( $tempheader_name ) ) {
+						$personalization = new SendGrid\Personalization();
+						$personalization->addTo(new SendGrid\Email( null, $tempheader_content ) );
+						$mail->addPersonalization( $personalization );
+					}
+				}
+			}
+		}
 
 		if(!is_array($attachments) && !empty($attachments)) {
 			$attachments = explode( "\n", str_replace( "\r\n", "\n", $attachments ) );
@@ -67,6 +87,7 @@ class SendGridService implements EmailService
 			'status' => 'Success',
 			'message' => 'Mail sent successfully'
 		);
+
 		$response = $sendGrid->client->mail()->send()->post($mail);
 		$status_code = $response->statusCode();
 		if($status_code != 202) {
